@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -5,92 +6,187 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Simulador de estrés CPU y RAM</title>
 <style>
-  * { box-sizing: border-box; }
-  body {
-    margin: 0; padding: 24px;
-    font-family: Arial, sans-serif;
-    background: #101827; color: #f1f5f9;
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 24px;
+  font-family: Arial, sans-serif;
+  background: #101827;
+  color: #f1f5f9;
+}
+
+main { max-width: 1000px; margin: auto; }
+h1 { color: #93c5fd; }
+.sub, .status, .legend { color: #bdc9dc; }
+
+.panel {
+  background: #1d293b;
+  padding: 18px;
+  border-radius: 14px;
+  margin: 16px 0;
+}
+
+.apps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.app {
+  background: #26354b;
+  padding: 14px;
+  border-radius: 10px;
+}
+
+button {
+  border: 0;
+  padding: 10px 13px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  margin: 4px 3px 4px 0;
+}
+
+.open { background: #60a5fa; color: #102039; }
+.close { background: #fca5a5; color: #451a1a; }
+.control { background: #e2e8f0; color: #172033; }
+
+.status { font-size: 13px; }
+
+.metric {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.number { font-size: 28px; font-weight: bold; }
+
+.track {
+  height: 18px;
+  border-radius: 10px;
+  background: #0b1220;
+  overflow: hidden;
+  margin: 10px 0;
+}
+
+.bar { height: 100%; transition: width .25s; }
+#cpuBar { background: #f87171; }
+#ramBar { background: #60a5fa; }
+
+.equation {
+  background: #101827;
+  padding: 14px;
+  border-radius: 8px;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
+
+#log { max-height: 180px; overflow-y: auto; color: #cbd5e1; }
+.warning { color: #fcd34d; font-weight: bold; }
+
+canvas {
+  display: block;
+  width: 100%;
+  background: #101827;
+  border-radius: 10px;
+}
+
+@media(max-width:600px) {
+  body { padding: 12px; }
+  .metric { grid-template-columns: 1fr; }
+}
+
+/* Distribución general en dos columnas */
+.layout {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+.columna {
+  min-width: 0;
+}
+
+/* Las gráficas ocupan todo el ancho de su columna */
+canvas {
+  max-width: 100%;
+}
+
+/* En celulares, una sola columna */
+@media (max-width: 700px) {
+  .layout {
+    grid-template-columns: 1fr;
   }
-  main { max-width: 950px; margin: auto; }
-  h1 { color: #93c5fd; margin-bottom: 6px; }
-  .sub { color: #bdc9dc; }
-  .panel {
-    background: #1d293b; padding: 18px;
-    border-radius: 14px; margin: 16px 0;
-  }
-  .apps {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 12px;
-  }
-  .app {
-    background: #26354b; padding: 14px;
-    border-radius: 10px;
-  }
-  button {
-    border: 0; padding: 10px 13px; border-radius: 8px;
-    cursor: pointer; font-weight: bold; margin: 4px 3px 4px 0;
-  }
-  .open { background: #60a5fa; color: #102039; }
-  .close { background: #fca5a5; color: #451a1a; }
-  .control { background: #e2e8f0; color: #172033; }
-  .status { font-size: 13px; color: #cbd5e1; }
-  .metric {
-    display: grid; grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-  .number { font-size: 28px; font-weight: bold; }
-  .track {
-    height: 18px; border-radius: 10px;
-    background: #0b1220; overflow: hidden; margin: 10px 0;
-  }
-  .bar { height: 100%; width: 0%; transition: width .25s; }
-  #cpuBar { background: #f87171; }
-  #ramBar { background: #60a5fa; }
-  .equation {
-    background: #101827; padding: 14px;
-    border-radius: 8px; overflow-wrap: anywhere;
-    line-height: 1.8;
-  }
-  #log { max-height: 160px; overflow-y: auto; color: #cbd5e1; }
-  .warning { color: #fcd34d; }
-  @media(max-width:600px) {
-    body { padding: 12px; }
-    .metric { grid-template-columns: 1fr; }
-  }
+}
+
 </style>
 </head>
+
 <body>
 <main>
   <h1>Simulador de estrés: CPU y RAM</h1>
   <p class="sub">
-    Abre y cierra programas para observar cómo varía el consumo
-    durante una prueba de estrés simulada.
+    Abre y cierra programas para observar cómo cambia el estado simulado.
+    No mide el hardware real.
   </p>
+
+  <div class="layout">
+  <div class="columna">
 
   <section class="panel">
     <h2>1. Control de la prueba</h2>
-    <p>Tiempo simulado: <strong id="time">0.0</strong> segundos</p>
-    <button class="control" onclick="startTest()">▶ Iniciar</button>
-    <button class="control" onclick="pauseTest()">⏸ Pausar</button>
-    <button class="control" onclick="resetTest()">↺ Reiniciar</button>
-    <p class="status">La prueba dura 8 segundos simulados y luego se detiene.</p>
+    <p>Tiempo: <strong id="time">0.0</strong> segundos</p>
+    <button class="control" id="startBtn">▶ Iniciar</button>
+    <button class="control" id="pauseBtn">⏸ Pausar</button>
+    <button class="control" id="resetBtn">↺ Reiniciar</button>
+    <p class="status">
+      La prueba dura 8 segundos simulados. La función base llega al
+      100 % de CPU en t = 8 s. Los programas pueden aumentar la carga.
+    </p>
   </section>
 
   <section class="panel">
     <h2>2. Abrir y cerrar programas</h2>
-    <p class="sub">Cada programa agrega una carga simulada de CPU y memoria.</p>
+    <p class="sub">Cada programa agrega una carga simulada.</p>
     <div class="apps" id="apps"></div>
   </section>
 
+   <section class="panel">
+    <h2>5. Relación con el cálculo vectorial</h2>
+    <div class="equation">
+      <strong>Función vectorial base:</strong><br>
+      r(t) = ⟨20 + 10t, 2 + 0.2t²⟩<br>
+      <strong>Dominio:</strong> 0 ≤ t ≤ 8<br>
+      <strong>Velocidad:</strong> v(t) = ⟨10, 0.4t⟩<br>
+      <strong>Magnitud:</strong> |v(t)| = √(100 + 0.16t²)<br>
+      <strong>Aceleración:</strong> a(t) = ⟨0, 0.4⟩<br><br>
+      <strong>Extensión del simulador:</strong><br>
+      rₛ(t) = ⟨20 + 10t + C, 2 + 0.2t² + M⟩<br>
+      C: carga adicional de CPU.<br>
+      M: memoria adicional en GB.
+    </div>
+    <p id="values"></p>
+    <p class="status">
+      Entre cambios de programas, C y M son constantes y la velocidad
+      coincide con la de la función base. En el instante en que cambia
+      un programa, hay un salto que no describe esa derivada.
+      CPU y RAM tienen unidades diferentes.
+    </p>
+  </section>
+
+  </div>
+  <div class="columna">
+
   <section class="panel">
-    <h2>3. Uso de recursos del computador</h2>
+    <h2>3. Uso de recursos</h2>
     <div class="metric">
       <div>
         <h3>CPU</h3>
-        <div class="number" id="cpu">20%</div>
+        <div class="number" id="cpu">20.0%</div>
         <div class="track"><div class="bar" id="cpuBar"></div></div>
-        <p class="status">Capacidad visualizada: 100%</p>
+        <p class="status">Escala visual: 0–100 %</p>
       </div>
       <div>
         <h3>Memoria RAM</h3>
@@ -99,98 +195,82 @@
         <p class="status">Capacidad asumida: 16 GB</p>
       </div>
     </div>
-    <p id="warning" class="warning"></p>
+    <p id="warning" class="warning" role="status" aria-live="polite"></p>
   </section>
 
-
-<section class="panel">
-  <h2>4. Gráficas del comportamiento del sistema</h2>
-
-  <h3>CPU y RAM respecto al tiempo</h3>
-  <canvas id="timeGraph" width="850" height="280"
-    style="width:100%;background:#101827;border-radius:10px">
-  </canvas>
-
-  <h3>Trayectoria vectorial: CPU vs. RAM</h3>
-  <canvas id="pathGraph" width="850" height="300"
-    style="width:100%;background:#101827;border-radius:10px">
-  </canvas>
-
-  <p class="status">
-    Las líneas muestran los valores simulados registrados durante la prueba.
-    Los cambios de programas generan saltos en la trayectoria.
-  </p>
-</section>
-
-
   <section class="panel">
-    <h2>5. Relación con el cálculo vectorial</h2>
-    <div class="equation">
-      <strong>Función vectorial:</strong><br>
-      r(t) = ⟨20 + 5t + C, 2 + 0.1t² + M⟩<br>
-      <strong>Velocidad entre cambios de programas:</strong><br>
-      v(t) = ⟨5, 0.2t⟩<br>
-      <strong>Magnitud de la velocidad:</strong><br>
-      |v(t)| = √(25 + 0.04t²)<br>
-      <strong>C:</strong> suma de las cargas de CPU de los programas abiertos.<br>
-      <strong>M:</strong> suma de la memoria RAM utilizada por esos programas.
-    </div>
-    <p id="values"></p>
+    <h2>4. Gráficas</h2>
+    <h3>CPU y RAM respecto al tiempo</h3>
+    <canvas id="timeGraph" width="850" height="280"></canvas>
+    <p class="legend">
+      Rojo: CPU (%). Azul: RAM (GB). Cada serie tiene su propia escala.
+    </p>
+    <h3>Trayectoria vectorial: CPU vs. RAM</h3>
+    <canvas id="pathGraph" width="850" height="300"></canvas>
     <p class="status">
-      C y M permanecen constantes mientras no cambie la lista de programas.
-      Al abrir o cerrar un programa, la función presenta un salto; la derivada
-      anterior describe la evolución entre esos cambios.
+      Los puntos muestran estados registrados. Abrir o cerrar programas
+      produce saltos en el estado simulado.
     </p>
   </section>
 
   <section class="panel">
     <h2>6. Registro de eventos</h2>
-    <div id="log">La prueba está lista. Abre un programa para comenzar.</div>
+    <div id="log" aria-live="polite">
+      La prueba está lista.
+    </div>
   </section>
+
   <p class="status">
-    Modelo educativo: los consumos son valores simulados, no mediciones reales
-    de tu computador. Los indicadores se limitan al 100% de CPU y 16 GB de RAM.
+    Modelo educativo: los consumos son simulados. Las barras se limitan
+    visualmente al 100 % de CPU y 16 GB de RAM.
   </p>
 </main>
+  </div>
+</div>
 
 <script>
+'use strict';
+
 const programs = [
-  { id: "browser", name: "🌐 Navegador", cpu: 12, ram: 1.2 },
-  { id: "editor", name: "💻 Editor de código", cpu: 18, ram: 2.0 },
-  { id: "video", name: "▶ Reproductor de video", cpu: 22, ram: 1.8 },
-  { id: "game", name: "🎮 Juego 3D", cpu: 30, ram: 3.5 }
+  { id: 'browser', name: '🌐 Navegador', cpu: 12, ram: 1.2 },
+  { id: 'editor', name: '💻 Editor de código', cpu: 18, ram: 2.0 },
+  { id: 'video', name: '▶ Reproductor de video', cpu: 22, ram: 1.8 },
+  { id: 'game', name: '🎮 Juego 3D', cpu: 30, ram: 3.5 }
 ];
 
-let active = new Set();
+const active = new Set();
 let t = 0;
 let timer = null;
+const history = [];
+const $ = id => document.getElementById(id);
 
 function drawPrograms() {
-  document.getElementById("apps").innerHTML = programs.map(p => {
+  $('apps').innerHTML = programs.map(p => {
     const isOpen = active.has(p.id);
     return `
       <div class="app">
         <strong>${p.name}</strong>
-        <p class="status">CPU: +${p.cpu} puntos</p>
+        <p class="status">CPU: +${p.cpu} puntos porcentuales</p>
         <p class="status">RAM: +${p.ram.toFixed(1)} GB</p>
-        <p>${isOpen ? "🟢 Abierto" : "⚪ Cerrado"}</p>
-        <button class="${isOpen ? "close" : "open"}"
-          onclick="toggleProgram('${p.id}')">
-          ${isOpen ? "Cerrar" : "Abrir"}
+        <p>${isOpen ? '🟢 Abierto' : '⚪ Cerrado'}</p>
+        <button class="${isOpen ? 'close' : 'open'}"
+          type="button" data-program="${p.id}">
+          ${isOpen ? 'Cerrar' : 'Abrir'}
         </button>
       </div>`;
-  }).join("");
+  }).join('');
 }
 
 function logEvent(message) {
-  const log = document.getElementById("log");
-  const line = document.createElement("p");
+  const line = document.createElement('p');
   line.textContent = `[t = ${t.toFixed(1)} s] ${message}`;
-  log.prepend(line);
+  $('log').prepend(line);
 }
 
 function toggleProgram(id) {
-  const p = programs.find(x => x.id === id);
+  const p = programs.find(item => item.id === id);
+  if (!p) return;
+
   if (active.has(id)) {
     active.delete(id);
     logEvent(`Se cerró ${p.name}.`);
@@ -198,73 +278,85 @@ function toggleProgram(id) {
     active.add(id);
     logEvent(`Se abrió ${p.name}.`);
   }
+
   drawPrograms();
-  update();
+  update(true);
 }
 
-const history = [];
+function getLoads() {
+  return programs
+    .filter(p => active.has(p.id))
+    .reduce((sum, p) => ({
+      cpu: sum.cpu + p.cpu,
+      ram: sum.ram + p.ram
+    }), { cpu: 0, ram: 0 });
+}
 
-function drawGraphs(cpu, ram) {
-  const tg = document.getElementById("timeGraph");
-  const pg = document.getElementById("pathGraph");
-  const ctx = tg.getContext("2d");
-  const pctx = pg.getContext("2d");
+function drawGraphs() {
+  const tg = $('timeGraph');
+  const pg = $('pathGraph');
+  const ctx = tg.getContext('2d');
+  const pctx = pg.getContext('2d');
+  if (!ctx || !pctx) return;
 
   function axes(c, w, h, xLabel, yLabel) {
     c.clearRect(0, 0, w, h);
-    c.strokeStyle = "#64748b";
-    c.fillStyle = "#e2e8f0";
+    c.strokeStyle = '#64748b';
+    c.fillStyle = '#e2e8f0';
     c.lineWidth = 1;
     c.beginPath();
     c.moveTo(55, 15);
     c.lineTo(55, h - 40);
     c.lineTo(w - 15, h - 40);
     c.stroke();
-    c.font = "12px Arial";
+    c.font = '12px Arial';
     c.fillText(yLabel, 8, 16);
     c.fillText(xLabel, w - 100, h - 12);
+    c.fillText('0', 40, h - 25);
   }
 
-  // Gráfica 1: CPU y RAM a través del tiempo
-  axes(ctx, tg.width, tg.height, "Tiempo (s)", "Uso");
-  ctx.fillStyle = "#f87171";
-  ctx.fillText("CPU (%)", 65, 20);
-  ctx.fillStyle = "#60a5fa";
-  ctx.fillText("RAM (GB)", 140, 20);
+  axes(ctx, tg.width, tg.height, 'Tiempo (s)', 'Uso');
+  ctx.fillStyle = '#f87171';
+  ctx.fillText('CPU (%)', 65, 20);
+  ctx.fillStyle = '#60a5fa';
+  ctx.fillText('RAM (GB)', 140, 20);
 
   function plotTime(key, max, color) {
-    if (history.length < 1) return;
+    if (!history.length) return;
     ctx.strokeStyle = color;
     ctx.lineWidth = 2;
     ctx.beginPath();
+
     history.forEach((p, i) => {
       const x = 55 + (p.t / 8) * (tg.width - 75);
-      const y = tg.height - 40 - (p[key] / max) *
-        (tg.height - 65);
+      const y = tg.height - 40 -
+        (Math.min(p[key], max) / max) * (tg.height - 65);
+
       if (i === 0) ctx.moveTo(x, y);
       else ctx.lineTo(x, y);
     });
+
     ctx.stroke();
   }
 
-  plotTime("cpu", 100, "#f87171");
-  plotTime("ram", 16, "#60a5fa");
+  plotTime('cpu', 100, '#f87171');
+  plotTime('ram', 16, '#60a5fa');
 
-  // Gráfica 2: trayectoria en el plano CPU-RAM
-  axes(pctx, pg.width, pg.height, "CPU (%)", "RAM (GB)");
+  axes(pctx, pg.width, pg.height, 'CPU (%)', 'RAM (GB)');
+  pctx.fillStyle = '#e2e8f0';
+  pctx.fillText('Estados del sistema', 65, 20);
 
-  pctx.fillStyle = "#e2e8f0";
-  pctx.fillText("Cada punto representa un estado del sistema", 65, 20);
-
-  if (history.length > 0) {
-    pctx.strokeStyle = "#a78bfa";
+  if (history.length) {
+    pctx.strokeStyle = '#a78bfa';
     pctx.lineWidth = 2;
     pctx.beginPath();
 
     history.forEach((p, i) => {
-      const x = 55 + (p.cpu / 100) * (pg.width - 75);
-      const y = pg.height - 40 - (p.ram / 16) *
-        (pg.height - 65);
+      const x = 55 + (Math.min(p.cpu, 100) / 100) *
+        (pg.width - 75);
+      const y = pg.height - 40 -
+        (Math.min(p.ram, 16) / 16) * (pg.height - 65);
+
       if (i === 0) pctx.moveTo(x, y);
       else pctx.lineTo(x, y);
     });
@@ -272,72 +364,83 @@ function drawGraphs(cpu, ram) {
     pctx.stroke();
 
     const last = history[history.length - 1];
-    const x = 55 + (last.cpu / 100) * (pg.width - 75);
-    const y = pg.height - 40 - (last.ram / 16) *
-      (pg.height - 65);
+    const x = 55 + (Math.min(last.cpu, 100) / 100) *
+      (pg.width - 75);
+    const y = pg.height - 40 -
+      (Math.min(last.ram, 16) / 16) * (pg.height - 65);
 
-    pctx.fillStyle = "#facc15";
+    pctx.fillStyle = '#facc15';
     pctx.beginPath();
     pctx.arc(x, y, 5, 0, Math.PI * 2);
     pctx.fill();
   }
 }
 
-function update() {
-  const C = programs
-    .filter(p => active.has(p.id))
-    .reduce((sum, p) => sum + p.cpu, 0);
+function update(record = false) {
+  const { cpu: C, ram: M } = getLoads();
 
-  const M = programs
-    .filter(p => active.has(p.id))
-    .reduce((sum, p) => sum + p.ram, 0);
+  const cpuRaw = 20 + 10 * t + C;
+  const ramRaw = 2 + 0.2 * t * t + M;
 
-  const cpuRaw = 20 + 5 * t + C;
-  const ramRaw = 2 + 0.1 * t * t + M;
+  const cpuShown = Math.min(100, Math.max(0, cpuRaw));
+  const ramShown = Math.min(16, Math.max(0, ramRaw));
 
-  const cpuShown = Math.min(100, cpuRaw);
-  const ramShown = Math.min(16, ramRaw);
+  if (
+    record ||
+    history.length === 0 ||
+    history[history.length - 1].t !== t
+  ) {
+    history.push({ t, cpu: cpuShown, ram: ramShown });
+    if (history.length > 500) history.shift();
+  } else if (history.length) {
+    history[history.length - 1] = {
+      t, cpu: cpuShown, ram: ramShown
+    };
+  }
 
-  history.push({
-  t: t,
-  cpu: cpuShown,
-  ram: ramShown
-});
+  drawGraphs();
 
-if (history.length > 500) history.shift();
+  $('time').textContent = t.toFixed(1);
+  $('cpu').textContent = `${cpuShown.toFixed(1)}%`;
+  $('ram').textContent = `${ramShown.toFixed(1)} GB`;
+  $('cpuBar').style.width = `${cpuShown}%`;
+  $('ramBar').style.width = `${ramShown / 16 * 100}%`;
 
-drawGraphs(cpuShown, ramShown);
+  const warnings = [];
+  if (cpuRaw >= 100) {
+    warnings.push('La CPU alcanzó o superó el 100 %.');
+  }
+  if (ramRaw >= 16) {
+    warnings.push('La RAM alcanzó o superó los 16 GB.');
+  }
+  $('warning').textContent = warnings.join(' ');
 
-  document.getElementById("time").textContent = t.toFixed(1);
-  document.getElementById("cpu").textContent =
-    `${cpuShown.toFixed(1)}%`;
-  document.getElementById("ram").textContent =
-    `${ramShown.toFixed(1)} GB`;
+  const speed = Math.sqrt(100 + 0.16 * t * t);
 
-  document.getElementById("cpuBar").style.width = cpuShown + "%";
-  document.getElementById("ramBar").style.width =
-    (ramShown / 16 * 100) + "%";
-
-  document.getElementById("warning").textContent =
-    cpuRaw > 100 || ramRaw > 16
-      ? "¡Límite superado en el modelo! El indicador se muestra al máximo."
-      : "";
-
-  const speed = Math.sqrt(25 + 0.04 * t * t);
-  document.getElementById("values").innerHTML =
-    `<strong>En este instante:</strong><br>
-     t = ${t.toFixed(1)} s; C = ${C}; M = ${M.toFixed(1)} GB.<br>
-     CPU calculada antes del límite = ${cpuRaw.toFixed(1)}%.<br>
-     RAM calculada antes del límite = ${ramRaw.toFixed(2)} GB.<br>
-     |v(t)| = ${speed.toFixed(3)}.`;
+  $('values').innerHTML = `
+    <strong>Valores del instante:</strong><br>
+    t = ${t.toFixed(1)} s; C = ${C}; M = ${M.toFixed(1)} GB.<br>
+    CPU calculada antes del límite = ${cpuRaw.toFixed(1)}%.<br>
+    RAM calculada antes del límite = ${ramRaw.toFixed(2)} GB.<br>
+    v(t) = ⟨10, ${(0.4 * t).toFixed(2)}⟩ entre cambios.<br>
+    |v(t)| = ${speed.toFixed(3)} (magnitud matemática).<br>
+    a(t) = ⟨0, 0.4⟩ entre cambios.
+  `;
 }
 
 function startTest() {
   if (timer !== null) return;
-  if (t >= 8) t = 0;
+
+  if (t >= 8) {
+    t = 0;
+    history.length = 0;
+    update(true);
+  }
+
   timer = setInterval(() => {
     t = Math.min(8, +(t + 0.1).toFixed(1));
-    update();
+    update(true);
+
     if (t >= 8) pauseTest();
   }, 100);
 }
@@ -352,14 +455,25 @@ function resetTest() {
   t = 0;
   history.length = 0;
   active.clear();
-  document.getElementById("log").textContent =
-    "Prueba reiniciada. Abre un programa para comenzar.";
+
+  $('log').textContent =
+    'Prueba reiniciada. Puedes iniciar el tiempo y abrir un programa.';
+
   drawPrograms();
-  update();
+  update(true);
 }
 
+$('apps').addEventListener('click', event => {
+  const button = event.target.closest('button[data-program]');
+  if (button) toggleProgram(button.dataset.program);
+});
+
+$('startBtn').addEventListener('click', startTest);
+$('pauseBtn').addEventListener('click', pauseTest);
+$('resetBtn').addEventListener('click', resetTest);
+
 drawPrograms();
-update();
+update(true);
 </script>
 </body>
 </html>
